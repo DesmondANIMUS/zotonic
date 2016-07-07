@@ -45,9 +45,9 @@ exometer_unsubscribe(_Metric, _DataPoint, _Extra, State) ->
     {ok, State}.
 
 exometer_report(Metric, DataPoint, Extra, Value, State) ->
-    %% Map the exometer metric name to a mqtt topic.
-    Topic = make_topic(Metric, DataPoint),
-    %%Write data to DB,
+    %% Insert exometer metric to db.
+    Context = get_context(Extra),
+    m_z_stats:insert(Metric, DataPoint, Value, Context),
     {ok, State}.
 
 exometer_call(Unknown, From, State) ->
