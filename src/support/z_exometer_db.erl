@@ -33,7 +33,6 @@
 
 -include("zotonic.hrl").
 -include_lib("exometer/include/exometer.hrl").
--include_lib("emqtt/include/emqtt.hrl").
 
 exometer_init(_Opts) ->
     {ok, []}.
@@ -47,7 +46,8 @@ exometer_unsubscribe(_Metric, _DataPoint, _Extra, State) ->
 exometer_report(Metric, DataPoint, Extra, Value, State) ->
     %% Insert exometer metric to db.
     Context = get_context(Extra),
-    m_z_stats:insert(Metric, DataPoint, Value, Context),
+    Key = make_db_metric_name(Metric, DataPoint),
+    m_z_stats:insert(Key, Value, Context),
     {ok, State}.
 
 exometer_call(Unknown, From, State) ->
@@ -81,3 +81,19 @@ get_context(Site) when is_atom(Site) ->
     z_context:new(Site);
 get_context(#context{}=Context) ->
     Context.
+
+%Join Metric and DataPoint such that if Metric = [erlang, io] and DataPoint = input
+%make_db_metric_name(Metric, DataPoint) = "erlang_io__input"
+make_db_metric_name(Metric, DataPoint) ->
+    L = lists:append(join(Metric, "_"), ["__", DataPoint]),
+    lists:concat(L).
+
+join(L, Sep) ->
+    join(L, Sep, []).
+
+join([], _Sep, Acc) ->
+    Acc;
+join([B| Rest], Sep, []) ->
+    join(Rest, Sep, [B]);
+join([B| Rest], Sep, Acc) ->
+    join(Rest, Sep, lists:append(Acc, [Sep, B])).

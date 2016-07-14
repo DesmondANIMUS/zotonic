@@ -40,6 +40,7 @@
 observe_module_activate(#module_activate{module=?MODULE}, _Context) ->
     ensure_metrics(erlang_metrics()),
     ensure_z_exometer_mqtt_added(),
+    ensure_z_exometer_db_added(),
     ensure_subscriptions(erlang_subscriptions()),
     ok;
 observe_module_activate(#module_activate{}, _Context) ->
@@ -68,19 +69,19 @@ erlang_metrics() ->
         {[erlang, network], {function, mod_zotonic_statistics, get_tcp_port_count, [],
                 value, [tcp_port_count]}, []}
     ].
-
+%%REMINDER: Change "zotonic" back to undefined and figure out how to get site dynamically
 erlang_subscriptions() ->
     [
         {[erlang, memory],
-            [total, ets, binary, processes, system, atom, code], 10000, undefined, true},
+            [total, ets, binary, processes, system, atom, code], 10000, zotonic, true},
         {[erlang, system_info],
-            [process_count, process_limit, port_count, port_limit], 10000, undefined, true},
+            [process_count, process_limit, port_count, port_limit], 10000, zotonic, true},
         {[erlang, statistics],
-            [run_queue], 10000, undefined, true},
+            [run_queue], 10000, zotonic, true},
         {[erlang, io],
-            [input, output], 10000, undefined, true},
+            [input, output], 10000, zotonic, true},
         {[erlang, network],
-            [tcp_port_count], 10000, undefined, true}
+            [tcp_port_count], 10000, zotonic, true}
     ].
 
 ensure_metrics([]) -> ok;
@@ -102,9 +103,16 @@ ensure_z_exometer_mqtt_added() ->
         {error, already_running} -> ok
     end.
 
+ensure_z_exometer_db_added() ->
+    case exometer_report:add_reporter(z_exometer_db, []) of
+        ok -> ok;
+        {error, already_running} -> ok
+    end.
+
 ensure_subscriptions([]) -> ok;
 ensure_subscriptions([{Metric, DataPoint, Interval, Extra, Retry}|Rest]) ->
     ok = exometer_report:subscribe(z_exometer_mqtt, Metric, DataPoint, Interval, Extra, Retry),
+    ok = exometer_report:subscribe(z_exometer_db, Metric, DataPoint, Interval, Extra, Retry),
     ensure_subscriptions(Rest).
 
 get_tcp_port_count() ->
