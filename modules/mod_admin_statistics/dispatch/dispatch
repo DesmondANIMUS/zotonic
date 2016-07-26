@@ -1,5 +1,6 @@
 %% -*- mode: erlang -*-
 %% Dispatch rule for overview of configuration settings.
 [
-    {admin_statistics, ["admin", "statistics"], controller_admin_statistics, [{ssl,true}]}
+    {admin_statistics, ["admin", "statistics"], controller_admin_statistics, [{ssl,true}]},
+    {admin_statistics_history, ["admin", "statistics_history"], controller_admin_statistics_history, [{ssl,true}]}
 ].

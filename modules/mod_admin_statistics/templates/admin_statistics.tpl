@@ -4,6 +4,8 @@
 
 {% block content %}
 
+{% include "_admin_stats_menu.tpl" %}
+
 <div class="row">
 
 <div class="col-md-4 col-lg-4 col-sm-4 col-xs-">
