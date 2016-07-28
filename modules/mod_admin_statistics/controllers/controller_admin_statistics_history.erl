@@ -32,6 +32,6 @@ html(Context) ->
     Vars = [
         {page_admin_statistics, true}
     ],
-    Html = z_template:render("admin_statistics.tpl", Vars, Context),
+    Html = z_template:render("admin_statistics_history.tpl", Vars, Context),
     z_context:output(Html, Context).
 

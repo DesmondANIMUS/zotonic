@@ -32,41 +32,60 @@
     m_value/2,
     
     insert/3,
-    install_zotonic_stats_table/1
+    install_zotonic_stats_table/1,
+
+    %%Used for debugging.
+    %%TODO: Remove from export.
+    get_stats_from_db/2,
+    get_stats_from_db/3
  ]).
 
 -include_lib("zotonic.hrl").
 
 %Handles all date queries. 
-%Syntax: m.z_stats.date[QueryString]
-m_find_value(date, #m{value=undefined}, _Context) -> 
-	#m{value=[{type, date}]};
+%Syntax: m.z_stats.datetime[QueryString]
+m_find_value(datetime, #m{value=undefined}, _Context) -> 
+	#m{value=[{type, datetime}]};
 
 %Handles date queries over a date range 
-%Syntax: m.z_stats.date[query fromDate=2016-12-20 toDate=2016-12-28]
+%Syntax: m.z_stats.datetime[query beginDatetime="{{2016, 12, 20}, {12, 59, 46}}" endDatetime="{{2016, 12, 20}, {12, 59, 46}}"]
+%Query = [{beginDatetime, "{{2016, 12, 20}, {12, 59, 46}}"}, {endDatetime, "{{2016, 12, 20}, {12, 59, 46}}"}]
 m_find_value({query, Query}, #m{value=Q} = M, _Context) ->
 	M#m{value=Query ++ Q};
 
 %Handles date queries for one day
-%Syntax: m.z_stats.date[2016-12-20]
+%Syntax: m.z_stats.datetime["{{2016, 12, 20}, {12, 59, 46}}"]
 m_find_value(Date, #m{value=Query} = M, _Context) ->
-	FromDate = [{fromDate, Date}],
-	M#m{value=FromDate ++ Query}.
+	BeginDatetime = [{beginDatetime, Date}],
+	M#m{value=BeginDatetime ++ Query}.
 
-
-m_to_list(_Source, _Context) ->
-    [].
+m_to_list(#m{value=undefined} = _M, _Context) ->
+    [];
+m_to_list(#m{value=Query} = _M, Context) ->
+    case proplists:is_defined(beginDatetime, Query) of
+        false -> [{error, "No Start Date"}];
+        true -> 
+            case proplists:is_defined(endDatetime, Query) of
+                false -> get_stats_from_db(proplists:get_value(beginDatetime, Query), Context);
+                true -> 
+                    get_stats_from_db(
+                        proplists:get_value(beginDatetime, Query),
+                        proplists:get_value(endDatetime, Query),
+                        Context
+                        )
+            end
+    end.
 
 m_value(_Source, _Context) ->
     [].
 
 %Get data from database
-get_stats(FromDate, Context) ->
-    z_db:assoc("select * from zotonic_stats where time_recorded >= $1 order by created asc",
-        [FromDate], Context).
-get_stats(FromDate, ToDate, Context) ->
-    z_db:assoc("select * from zotonic_stats where time_recorded between $1 and $2 order by timestamp asc",
-        [FromDate, ToDate], Context).
+get_stats_from_db(BeginDatetime, Context) ->
+    z_db:assoc("select * from zotonic_stats where time_recorded >= $1 order by time_recorded asc",
+        [BeginDatetime], Context).
+get_stats_from_db(BeginDatetime, EndDatetime, Context) ->
+    z_db:assoc("select * from zotonic_stats where time_recorded between $1 and $2 order by time_recorded asc",
+        [BeginDatetime, EndDatetime], Context).
 
 %%Insert or update stats into a particular database row
 %%TODO: Add support for round robin inserts and use "case...of" to detect failure.
@@ -88,8 +107,8 @@ db_insert(Key, Value, Context) ->
 %%
 %% Schema
 %%
-
 %%TODO: Move to different Erlang module
+
 install_zotonic_stats_table(Context) ->
     case z_db:table_exists(zotonic_stats, Context) of
         false ->
