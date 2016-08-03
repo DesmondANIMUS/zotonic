@@ -42,16 +42,21 @@
 
 -include_lib("zotonic.hrl").
 
+
 %Handles all date queries. 
 %Syntax: m.z_stats.datetime[QueryString]
-m_find_value(datetime, #m{value=undefined}, _Context) -> 
-	#m{value=[{type, datetime}]};
+m_find_value(datetime, #m{value=undefined} = M, _Context) -> 
+	M#m{value=[{type, datetime}]};
 
 %Handles date queries over a date range 
-%Syntax: m.z_stats.datetime[query beginDatetime="{{2016, 12, 20}, {12, 59, 46}}" endDatetime="{{2016, 12, 20}, {12, 59, 46}}"]
-%Query = [{beginDatetime, "{{2016, 12, 20}, {12, 59, 46}}"}, {endDatetime, "{{2016, 12, 20}, {12, 59, 46}}"}]
-m_find_value({query, Query}, #m{value=Q} = M, _Context) ->
-	M#m{value=Query ++ Q};
+%Syntax: m.z_stats.datetime[{query beginDatetime="2016-12-20 12-59-46" endDatetime="2016-12-20 12-59-46"}]
+%Query = [{beginDatetime, "2016-12-20 12-59-46"}, {endDatetime, "2016-12-20 12-59-46"}]
+m_find_value({query, Query}, #m{value=[{type, datetime}]} = M, Context) ->
+    BeginDatetime = z_convert:to_datetime(proplists:get_value(beginDatetime, Query)),
+    EndDatetime = z_convert:to_datetime(proplists:get_value(endDatetime, Query)),
+    TimeRange = [{beginDatetime, BeginDatetime}, {endDatetime, EndDatetime}],
+	M1 = M#m{value=TimeRange ++ [{type, datetime}]},
+    get_stats(M1, Context);
 
 %Handles date queries for one day
 %Syntax: m.z_stats.datetime["{{2016, 12, 20}, {12, 59, 46}}"]
@@ -59,9 +64,18 @@ m_find_value(Date, #m{value=Query} = M, _Context) ->
 	BeginDatetime = [{beginDatetime, Date}],
 	M#m{value=BeginDatetime ++ Query}.
 
-m_to_list(#m{value=undefined} = _M, _Context) ->
-    [];
-m_to_list(#m{value=Query} = _M, Context) ->
+m_to_list(_M, _Context) ->
+    [].
+
+m_value(_Source, _Context) ->
+    [].
+
+
+%%
+%% Helpers
+%%
+
+get_stats(#m{value=Query} = _M, Context) ->
     case proplists:is_defined(beginDatetime, Query) of
         false -> [{error, "No Start Date"}];
         true -> 
@@ -76,9 +90,6 @@ m_to_list(#m{value=Query} = _M, Context) ->
             end
     end.
 
-m_value(_Source, _Context) ->
-    [].
-
 %Get data from database
 get_stats_from_db(BeginDatetime, Context) ->
     z_db:assoc("select * from zotonic_stats where time_recorded >= $1 order by time_recorded asc",
@@ -92,10 +103,6 @@ get_stats_from_db(BeginDatetime, EndDatetime, Context) ->
 
 insert(Key, Value, Context) ->  
     db_insert(Key, Value, Context).
-
-%%
-%% Helpers
-%%
 
 
 db_insert(Key, Value, Context) ->
