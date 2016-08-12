@@ -43,14 +43,14 @@
 -include_lib("zotonic.hrl").
 
 
-%Handles all date queries. 
+%Handles all datetime queries. 
 %Syntax: m.z_stats.datetime[QueryString]
 m_find_value(datetime, #m{value=undefined} = M, _Context) -> 
 	M#m{value=[{type, datetime}]};
 
 %Handles date queries over a date range 
-%Syntax: m.z_stats.datetime[{query beginDatetime="2016-12-20 12-59-46" endDatetime="2016-12-20 12-59-46"}]
-%Query = [{beginDatetime, "2016-12-20 12-59-46"}, {endDatetime, "2016-12-20 12-59-46"}]
+%Syntax: m.z_stats.datetime[{query beginDatetime="2016-12-20 12:59:46" endDatetime="2016-12-20 12:59:46"}]
+%Query = [{beginDatetime, "2016-12-20 12:59:46"}, {endDatetime, "2016:12:20 12:59:46"}]
 m_find_value({query, Query}, #m{value=[{type, datetime}]} = M, Context) ->
     BeginDatetime = z_convert:to_datetime(proplists:get_value(beginDatetime, Query)),
     EndDatetime = z_convert:to_datetime(proplists:get_value(endDatetime, Query)),

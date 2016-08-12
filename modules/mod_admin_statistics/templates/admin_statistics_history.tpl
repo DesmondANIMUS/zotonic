@@ -15,17 +15,8 @@
 <br />
 
 
-{{ m.z_stats.datetime[{query beginDatetime="2016-8-2 00-01-46" endDatetime="2016-8-8 23-59-46"}] }}
+{% print m.z_stats.datetime[{query beginDatetime="2016-8-3 00:01:46" endDatetime="2016-8-3 15:59:46"}] %}
 
-{% for id,time,metric_name,metric_value in m.z_stats.datetime[{query beginDatetime="2016-8-2 00-01-46" endDatetime="2016-8-8 23-59-46"}] %}
-
-    {% for k,v in id %}
-
-    {{ k }} : {{ v }}
-
-    {% endfor %} 
-
-{% endfor %}
 <br />
 
 <!-- DEBUG STUFF END -->
