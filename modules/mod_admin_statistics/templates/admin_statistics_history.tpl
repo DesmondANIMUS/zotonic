@@ -2,7 +2,7 @@
 
 {% block title %}{_ Statistics _}{% endblock %}
 {% block head_extra  %}
-	{% lib "js/d3/d3.min.js" "js/plottable/plottable.min.js" "js/plottable/plottable.css" %}
+	{% lib "js/plottable/plottable.css" "js/datetimepicker/jquery.datetimepicker.css" "js/d3/d3.min.js" "js/plottable/plottable.min.js" "js/datetimepicker/jquery.datetimepicker.full.min.js" %}
 {% endblock %}
 
 {% block content %}
@@ -11,41 +11,70 @@
 
 <!-- DEBUG STUFF -->
 
+<form id="dtp" method="post" action="postback">
+	<label for="dtp-start">Start: </label>
+  	<input type="text" name="start" id="dtp-start" />
+
+  	<label for="dtp-end">End: </label>
+  	<input type="text" name="end" id="dtp-end" />
+
+  	<input type="submit" value="Apply" />
+ </form>
+
 <br />
+<svg id="erlang-memory"></svg>
 
-<svg id="chart"></svg>
 
+<br />
 {% javascript %}
 
-	var xScale = new Plottable.Scales.Linear();
-				var yScale = new Plottable.Scales.Linear();
+	//Date Time Picker
+	$('#dtp-start').datetimepicker();
+	$('#dtp-end').datetimepicker();
 
-				var xAxis = new Plottable.Axes.Numeric(xScale, "bottom");
-				var yAxis = new Plottable.Axes.Numeric(yScale, "left");
+	//Charting Code
+	var data = {{ m.z_stats.datetime[{query beginDatetime="2016-8-3 15:01:46" endDatetime="2016-8-3 15:59:46"}] | to_json }};
+	var emt = [];
+	$.each(data, getTotalMemory);
 
-				var plot = new Plottable.Plots.Line();
-				plot.x(function (d) {return d.x; }, xScale);
-				plot.y(function (d) {return d.y; }, yScale);
 
-				var data = [
-							  { "x": 0, "y": 1 },
-							  { "x": 1, "y": 2 },
-							  { "x": 2, "y": 4 },
-							  { "x": 3, "y": 8 }
-							];
+	var xScale = new Plottable.Scales.Time();
+	var yScale = new Plottable.Scales.Linear();
 
-				var dataset = new Plottable.Dataset(data);
+	var xAxis = new Plottable.Axes.Time(xScale, "bottom");
+	var yAxis = new Plottable.Axes.Numeric(yScale, "left");
 
-				plot.addDataset(dataset);
+	var plot = new Plottable.Plots.Line();
+	plot.x(timeAxisAccessor, xScale);
+	plot.y(yAxisAccessor, yScale);
 
-				var chart = new Plottable.Components.Table([[yAxis, plot], [null, xAxis]]);
-				chart.renderTo("svg#chart");
+	var panZoom = new Plottable.Interactions.PanZoom();
+	panZoom.addXScale(xScale)
+			.addYScale(yScale)
+			.attachTo(plot);
+
+	var dataset = new Plottable.Dataset(emt);
+
+	plot.addDataset(dataset);
+
+	var chart = new Plottable.Components.Table([[yAxis, plot], [null, xAxis]]);
+	chart.renderTo("svg#erlang-memory");
+
+	function timeAxisAccessor(d) {
+		var time_recorded = new Date(d.time_recorded);
+		return time_recorded;
+	}
+	function yAxisAccessor(d) {
+		//Convert result from B to Mb
+		return (d.metric_value/1024/1024).toFixed(1);
+	}
+	function getTotalMemory(k, v) {
+		if (v.metric_name === "erlang_memory__total") {
+			emt.push(v);
+		}
+	}
 
 {% endjavascript %}
-
-<br />
-
-<!-- {% print m.z_stats.datetime[{query beginDatetime="2016-8-3 15:01:46" endDatetime="2016-8-3 15:59:46"}] %} -->
 
 <br />
 
