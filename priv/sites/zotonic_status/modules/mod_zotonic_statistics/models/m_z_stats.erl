@@ -34,8 +34,6 @@
     insert/3,
     install_zotonic_stats_table/1,
 
-    %%Used for debugging.
-    %%TODO: Remove from export.
     get_stats_from_db/2,
     get_stats_from_db/3
  ]).

@@ -11,7 +11,7 @@
 
 <!-- DEBUG STUFF -->
 
-<form id="dtp" method="post" action="postback">
+<form id="dtp" method="get" action="/api/admin_statistics">
 	<label for="dtp-start">Start: </label>
   	<input type="text" name="start" id="dtp-start" />
 
@@ -60,6 +60,40 @@
 	var chart = new Plottable.Components.Table([[yAxis, plot], [null, xAxis]]);
 	chart.renderTo("svg#erlang-memory");
 
+
+	$($('#dtp').submit(getStatsByDateTime));
+
+
+	function getStatsByDateTime(submit) {
+		submit.preventDefault();
+		$.ajax({
+            url     : $(this).attr('action'),
+            type    : $(this).attr('method'),
+            dataType: 'json',
+            data    : $(this).serialize(),
+            success : function( newData ) {
+            			emt = [];
+                        $.each(newData, getTotalMemory);
+                        dataset.data(emt);
+                      },
+            error   : function( xhr, err ) {
+                        alert('Error');     
+                      }
+	    });
+
+
+	    //TODO: Get browser timezone and use it in date time query
+
+		function get_time_zone_offset() {
+	    	var current_date = new Date();
+	    	return -current_date.getTimezoneOffset() / 60;
+	    }
+
+	    function standardiseTime (time) {
+			time.replace
+		}
+	}
+	
 	function timeAxisAccessor(d) {
 		var time_recorded = new Date(d.time_recorded);
 		return time_recorded;
