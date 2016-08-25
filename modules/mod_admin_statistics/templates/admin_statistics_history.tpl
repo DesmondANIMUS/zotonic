@@ -34,9 +34,25 @@
 
 	//Charting Code
 	var data = {{ m.z_stats.datetime[{query beginDatetime="2016-8-3 15:01:46" endDatetime="2016-8-3 15:59:46"}] | to_json }};
-	var emt = [];
-	$.each(data, getTotalMemory);
-
+	var metrics = [
+			"erlang_system_info__process_count",
+			"erlang_memory__total",
+			"erlang_memory__processes_used",
+			"erlang_memory__system",
+			"erlang_memory__atom",
+			"erlang_memory__atom_used",
+			"erlang_memory__binary",
+			"erlang_memory__code",
+			"erlang_memory__ets",
+			"erlang_network__tcp_port_count",
+			"erlang_statistics__run_queue",
+			"erlang_io__input",
+			"erlang_io__output",
+			"erlang_statistics__run_queue"
+		];
+	var sortedData = [];
+	initSortedData();
+	data.forEach(sortMetric);
 
 	var xScale = new Plottable.Scales.Time();
 	var yScale = new Plottable.Scales.Linear();
@@ -53,7 +69,7 @@
 			.addYScale(yScale)
 			.attachTo(plot);
 
-	var dataset = new Plottable.Dataset(emt);
+	var dataset = new Plottable.Dataset(sortedData["erlang_memory__total"]);
 
 	plot.addDataset(dataset);
 
@@ -71,10 +87,10 @@
             type    : $(this).attr('method'),
             dataType: 'json',
             data    : $(this).serialize(),
-            success : function( newData ) {
-            			emt = [];
-                        $.each(newData, getTotalMemory);
-                        dataset.data(emt);
+            success : function(data) {
+            			initSortedData();
+                        $.each(data, sortMetric);
+                        dataset.data(sortedData);
                       },
             error   : function( xhr, err ) {
                         alert('Error');     
@@ -102,10 +118,19 @@
 		//Convert result from B to Mb
 		return (d.metric_value/1024/1024).toFixed(1);
 	}
-	function getTotalMemory(k, v) {
-		if (v.metric_name === "erlang_memory__total") {
-			emt.push(v);
-		}
+	function sortMetric(datapoint) {
+		metrics.forEach(function(metric_name) {
+			if(metric_name === datapoint.metric_name) {
+				sortedData[metric_name].push(datapoint);
+			}
+		});
+	}
+
+	//Empty and Create sub-arrays for categorising metrics in sortedData array
+	function initSortedData() {
+		sortedData = [];
+		//Create sub-arrays within sortedData where the stats will be stored
+		metrics.forEach(function(m) { sortedData[m] = []; });
 	}
 
 {% endjavascript %}
