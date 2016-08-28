@@ -22,7 +22,8 @@
  </form>
 
 <br />
-<svg id="erlang-memory"></svg>
+<div id="charts">
+</div>
 
 
 <br />
@@ -37,6 +38,7 @@
 	var metrics = [
 			"erlang_system_info__process_count",
 			"erlang_memory__total",
+			"erlang_memory__processes",
 			"erlang_memory__processes_used",
 			"erlang_memory__system",
 			"erlang_memory__atom",
@@ -47,34 +49,20 @@
 			"erlang_network__tcp_port_count",
 			"erlang_statistics__run_queue",
 			"erlang_io__input",
-			"erlang_io__output",
-			"erlang_statistics__run_queue"
+			"erlang_io__output"
 		];
-	var sortedData = [];
+
+	//create svg elements wherein charts of the metrics will be drawn
+	$.each(metrics, function(index, metric) {
+		metricElement = '<svg id="' + metric + '"></svg>';
+		$('#charts').append(metricElement);
+	});
+
+	var sortedData = {};
 	initSortedData();
-	data.forEach(sortMetric);
-
-	var xScale = new Plottable.Scales.Time();
-	var yScale = new Plottable.Scales.Linear();
-
-	var xAxis = new Plottable.Axes.Time(xScale, "bottom");
-	var yAxis = new Plottable.Axes.Numeric(yScale, "left");
-
-	var plot = new Plottable.Plots.Line();
-	plot.x(timeAxisAccessor, xScale);
-	plot.y(yAxisAccessor, yScale);
-
-	var panZoom = new Plottable.Interactions.PanZoom();
-	panZoom.addXScale(xScale)
-			.addYScale(yScale)
-			.attachTo(plot);
-
-	var dataset = new Plottable.Dataset(sortedData["erlang_memory__total"]);
-
-	plot.addDataset(dataset);
-
-	var chart = new Plottable.Components.Table([[yAxis, plot], [null, xAxis]]);
-	chart.renderTo("svg#erlang-memory");
+	$.each(data, sortMetric);
+	drawChart(sortedData);
+	console.log(sortedData);
 
 
 	$($('#dtp').submit(getStatsByDateTime));
@@ -87,29 +75,49 @@
             type    : $(this).attr('method'),
             dataType: 'json',
             data    : $(this).serialize(),
-            success : function(data) {
-            			initSortedData();
+            success : function(newData) {
+            			data = [];
+            			data = newData;
+            			initSortedData();            			
                         $.each(data, sortMetric);
-                        dataset.data(sortedData);
+                        dataset.data(sortedData["erlang_memory__total"]);
                       },
             error   : function( xhr, err ) {
                         alert('Error');     
                       }
 	    });
+	}
 
+	//Draw charts and convert {{sortedData}} to an array of Metric objects
+	function drawChart(initSortedData) {
+		sortedData = {};
+		$.each(initSortedData, function(metricName, metric) {
+			sortedData[metricName] = new Metric(metricName, metric.rawData);
+			var xAxis = sortedData[metricName].xAxis;
+			var yAxis = sortedData[metricName].yAxis;
+			var plot = sortedData[metricName].plot;
 
-	    //TODO: Get browser timezone and use it in date time query
-
-		function get_time_zone_offset() {
-	    	var current_date = new Date();
-	    	return -current_date.getTimezoneOffset() / 60;
-	    }
-
-	    function standardiseTime (time) {
-			time.replace
-		}
+			sortedData[metricName].chart = new Plottable.Components.Table([[yAxis, plot],[null, xAxis]]);
+			elementID = '#' + metricName;
+			sortedData[metricName].chart.renderTo(elementID);
+		});
 	}
 	
+	//Create a Metric object based on the Plottable library
+	function Metric(name, rawData) {
+		this.name = name;
+		this.rawData = rawData;
+		this.xScale = new Plottable.Scales.Time();
+		this.yScale = new Plottable.Scales.Linear();
+		this.xAxis = new Plottable.Axes.Time(this.xScale, "bottom");
+		this.yAxis = new Plottable.Axes.Numeric(this.yScale, "left");
+		this.plot = new Plottable.Plots.Line().x(timeAxisAccessor, this.xScale).y(yAxisAccessor, this.yScale);
+		this.panZoom = new Plottable.Interactions.PanZoom().addXScale(this.xScale)
+			.addYScale(this.yScale)
+			.attachTo(this.plot);
+		this.chartData = new Plottable.Dataset(this.rawData);
+		this.plot.addDataset(this.chartData);
+	}
 	function timeAxisAccessor(d) {
 		var time_recorded = new Date(d.time_recorded);
 		return time_recorded;
@@ -118,19 +126,22 @@
 		//Convert result from B to Mb
 		return (d.metric_value/1024/1024).toFixed(1);
 	}
-	function sortMetric(datapoint) {
+	function sortMetric(index, datapoint) {
 		metrics.forEach(function(metric_name) {
 			if(metric_name === datapoint.metric_name) {
-				sortedData[metric_name].push(datapoint);
+				sortedData[metric_name].rawData.push(datapoint);
 			}
 		});
 	}
 
 	//Empty and Create sub-arrays for categorising metrics in sortedData array
 	function initSortedData() {
-		sortedData = [];
-		//Create sub-arrays within sortedData where the stats will be stored
-		metrics.forEach(function(m) { sortedData[m] = []; });
+		sortedData = {};
+		//Create sub-objects within sortedData where the stats will be stored
+		metrics.forEach(function(m) { 
+			sortedData[m] = {};
+			sortedData[m].rawData = [];
+		});
 	}
 
 {% endjavascript %}
