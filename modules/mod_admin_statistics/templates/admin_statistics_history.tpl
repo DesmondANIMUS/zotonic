@@ -61,13 +61,11 @@
 	var sortedData = {};
 	initSortedData();
 	$.each(data, sortMetric);
-	drawChart(sortedData);
-	console.log(sortedData);
+	drawCharts(sortedData);
 
-
+	//Get date range from calendar form
 	$($('#dtp').submit(getStatsByDateTime));
-
-
+	
 	function getStatsByDateTime(submit) {
 		submit.preventDefault();
 		$.ajax({
@@ -77,10 +75,15 @@
             data    : $(this).serialize(),
             success : function(newData) {
             			data = [];
+            			console.log(data);
             			data = newData;
-            			initSortedData();            			
+            			console.log(data);
+            			console.log(sortedData);
+            			deleteRawData();
+            			console.log(sortedData);
                         $.each(data, sortMetric);
-                        dataset.data(sortedData["erlang_memory__total"]);
+                        updateCharts();
+                        console.log(sortedData);
                       },
             error   : function( xhr, err ) {
                         alert('Error');     
@@ -88,8 +91,8 @@
 	    });
 	}
 
-	//Draw charts and convert {{sortedData}} to an array of Metric objects
-	function drawChart(initSortedData) {
+	//CREATE charts and convert {{sortedData}} to an array of Metric objects
+	function drawCharts(initSortedData) {
 		sortedData = {};
 		$.each(initSortedData, function(metricName, metric) {
 			sortedData[metricName] = new Metric(metricName, metric.rawData);
@@ -100,6 +103,13 @@
 			sortedData[metricName].chart = new Plottable.Components.Table([[yAxis, plot],[null, xAxis]]);
 			elementID = '#' + metricName;
 			sortedData[metricName].chart.renderTo(elementID);
+		});
+	}
+
+	//UPDATE charts by refreshing Metric.rawData
+	function updateCharts() {
+		$.each(sortedData, function(metricName, metric) {	
+			metric.chartData.data(metric.rawData);
 		});
 	}
 	
@@ -141,6 +151,11 @@
 		metrics.forEach(function(m) { 
 			sortedData[m] = {};
 			sortedData[m].rawData = [];
+		});
+	}
+	function deleteRawData() {
+		metrics.forEach(function(metric_name) {
+			sortedData[metric_name].rawData = [];
 		});
 	}
 
